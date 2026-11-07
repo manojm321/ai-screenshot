@@ -332,6 +332,35 @@ class AppDelegate: NSObject, NSApplicationDelegate {
             showThumbnail(filePath: args[2])
         } else if args.contains("--capture") {
             triggerCapture()
+        } else {
+            notifyOnLaunch()
+        }
+    }
+
+    func notifyOnLaunch() {
+        let isFirstLaunch = !UserDefaults.standard.bool(forKey: "HasLaunchedBefore")
+
+        // Trigger notification banner
+        DispatchQueue.global(qos: .utility).async {
+            let proc = Process()
+            proc.executableURL = URL(fileURLWithPath: "/usr/bin/osascript")
+            let title = isFirstLaunch ? "AI Screenshot Ready!" : "AI Screenshot Running"
+            let msg = "Press ⌘ + ⇧ + 1 anywhere to capture. Camera icon added to menu bar."
+            proc.arguments = ["-e", "display notification \"\(msg)\" with title \"\(title)\" sound name \"Glass\""]
+            try? proc.run()
+        }
+
+        if isFirstLaunch {
+            UserDefaults.standard.set(true, forKey: "HasLaunchedBefore")
+            DispatchQueue.main.asyncAfter(deadline: .now() + 0.3) {
+                let alert = NSAlert()
+                alert.messageText = "AI Screenshot is Ready!"
+                alert.informativeText = "AI Screenshot is now active in your top menu bar.\n\n• Shortcut: Press ⌘ + ⇧ + 1 anywhere to take an AI screenshot.\n• Menu Bar: Click the camera icon for quick capture, screenshot folder, or Launch at Login."
+                alert.alertStyle = .informational
+                alert.addButton(withTitle: "Got It")
+                NSApp.activate(ignoringOtherApps: true)
+                alert.runModal()
+            }
         }
     }
 
