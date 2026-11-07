@@ -314,10 +314,17 @@ class AppDelegate: NSObject, NSApplicationDelegate {
     private var isCapturing = false
 
     func applicationDidFinishLaunching(_ notification: Notification) {
+        let args = CommandLine.arguments
+
+        if args.contains("--show-icon") {
+            UserDefaults.standard.set(false, forKey: "HideMenuBarIcon")
+        } else if args.contains("--hide-icon") {
+            UserDefaults.standard.set(true, forKey: "HideMenuBarIcon")
+        }
+
         setupStatusBar()
         setupHotKey()
 
-        let args = CommandLine.arguments
         if args.count > 2 && args[1] == "--preview" {
             showThumbnail(filePath: args[2])
         } else if args.contains("--capture") {
@@ -334,6 +341,16 @@ class AppDelegate: NSObject, NSApplicationDelegate {
     }
 
     func setupStatusBar() {
+        if UserDefaults.standard.bool(forKey: "HideMenuBarIcon") {
+            if let item = statusItem {
+                NSStatusBar.system.removeStatusItem(item)
+                statusItem = nil
+            }
+            return
+        }
+
+        guard statusItem == nil else { return }
+
         statusItem = NSStatusBar.system.statusItem(withLength: NSStatusItem.variableLength)
         guard let button = statusItem?.button else { return }
 
@@ -362,6 +379,10 @@ class AppDelegate: NSObject, NSApplicationDelegate {
         }
         menu.addItem(loginItem)
 
+        let hideIconItem = NSMenuItem(title: "Hide Menu Bar Icon", action: #selector(hideStatusBarIconAction), keyEquivalent: "")
+        hideIconItem.target = self
+        menu.addItem(hideIconItem)
+
         menu.addItem(NSMenuItem.separator())
 
         let quitItem = NSMenuItem(title: "Quit AI Screenshot", action: #selector(quitAction), keyEquivalent: "q")
@@ -369,6 +390,25 @@ class AppDelegate: NSObject, NSApplicationDelegate {
         menu.addItem(quitItem)
 
         statusItem?.menu = menu
+    }
+
+    @objc func hideStatusBarIconAction() {
+        let alert = NSAlert()
+        alert.messageText = "Hide Menu Bar Icon?"
+        alert.informativeText = "AI Screenshot will continue running in the background and respond to ⌘⇧1.\n\nTo restore the menu bar icon, simply open AI Screenshot again from Applications or Spotlight."
+        alert.alertStyle = .informational
+        alert.addButton(withTitle: "Hide Icon")
+        alert.addButton(withTitle: "Cancel")
+
+        NSApp.activate(ignoringOtherApps: true)
+        let response = alert.runModal()
+        if response == .alertFirstButtonReturn {
+            UserDefaults.standard.set(true, forKey: "HideMenuBarIcon")
+            if let item = statusItem {
+                NSStatusBar.system.removeStatusItem(item)
+                statusItem = nil
+            }
+        }
     }
 
     @objc func triggerCaptureAction() {
@@ -418,7 +458,16 @@ class AppDelegate: NSObject, NSApplicationDelegate {
     }
 
     func applicationShouldHandleReopen(_ sender: NSApplication, hasVisibleWindows flag: Bool) -> Bool {
-        triggerCapture()
+        if UserDefaults.standard.bool(forKey: "HideMenuBarIcon") {
+            UserDefaults.standard.set(false, forKey: "HideMenuBarIcon")
+            setupStatusBar()
+            let proc = Process()
+            proc.executableURL = URL(fileURLWithPath: "/usr/bin/osascript")
+            proc.arguments = ["-e", "display notification \"Menu bar icon restored.\" with title \"AI Screenshot\" sound name \"Glass\""]
+            try? proc.run()
+        } else {
+            triggerCapture()
+        }
         return true
     }
 

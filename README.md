@@ -27,6 +27,7 @@ No API keys. No external servers. 100% on-device, private, and automated.
 - **Interactive Capture**: Uses native `screencapture -i` for pixel-accurate crosshairs or window capture (`Space`).
 - **Native Global Hotkey**: Registers **`⌘ + ⇧ + 1`** via macOS's native Carbon HotKey API (`RegisterEventHotKey`) with 0ms latency and no Accessibility permissions needed.
 - **Menu Bar Companion**: Sleek camera status item in the menu bar with one-click capture, quick access to your screenshot directory, and Launch at Login toggle.
+- **Hideable Menu Bar Icon**: Easily hide the menu bar icon anytime for an invisible, distraction-free setup (`⌘⇧1` continues to work in the background).
 - **GitHub Actions CI**: Automated building and zip artifact generation on every commit and release.
 
 ---
@@ -56,6 +57,12 @@ This compiles `AI Screenshot.app`, installs it to `/Applications`, launches the 
 1. **Native HotKey (`RegisterEventHotKey`)**: The app directly registers `⌘ + ⇧ + 1` with the macOS window server.
 2. **Instant Response**: Handled directly in-process with 0ms latency.
 3. **Launch at Login**: Click the camera icon in your top menu bar and check **Launch at Login** to keep `⌘ + ⇧ + 1` active across system restarts.
+4. **Hiding & Restoring the Icon**:
+   - To hide: Click the menu bar icon -> select **Hide Menu Bar Icon**.
+   - To restore: Simply re-open `AI Screenshot` from `/Applications` or Spotlight, or run:
+     ```bash
+     open -a "AI Screenshot" --args --show-icon
+     ```
 
 To uninstall anytime:
 ```bash
