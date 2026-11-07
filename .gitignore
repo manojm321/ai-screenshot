@@ -7,6 +7,7 @@ AI Screenshot.app/
 preview_thumbnail
 AppIcon.icns
 *.zip
+*.dmg
 *.sha256
 
 # Python

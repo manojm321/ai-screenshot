@@ -36,17 +36,24 @@ jobs:
           ls -la "AI Screenshot.app/Contents/MacOS"
           ls -la "AI Screenshot.app/Contents/Resources"
 
+      - name: Build DMG Installer
+        run: |
+          chmod +x build_dmg.sh
+          ./build_dmg.sh
+
       - name: Create Zip Archive
         run: |
           ditto -c -k --keepParent "AI Screenshot.app" "AI-Screenshot.zip"
           shasum -a 256 "AI-Screenshot.zip" > "AI-Screenshot.zip.sha256"
           cat "AI-Screenshot.zip.sha256"
 
-      - name: Upload Artifact
+      - name: Upload Artifacts
         uses: actions/upload-artifact@v4
         with:
           name: AI-Screenshot-macOS
           path: |
+            AI-Screenshot.dmg
+            AI-Screenshot.dmg.sha256
             AI-Screenshot.zip
             AI-Screenshot.zip.sha256
 
@@ -55,6 +62,8 @@ jobs:
         uses: softprops/action-gh-release@v2
         with:
           files: |
+            AI-Screenshot.dmg
+            AI-Screenshot.dmg.sha256
             AI-Screenshot.zip
             AI-Screenshot.zip.sha256
           draft: false

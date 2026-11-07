@@ -21,12 +21,14 @@ No API keys. 100% local and private.
 
 ## 🚀 Install
 
+### Option 1: DMG Installer (Recommended)
+Download **[`AI-Screenshot.dmg`](https://github.com/manojm321/ai-screenshot/releases)**, open it, and drag `AI Screenshot.app` to `Applications`.
+
+### Option 2: Build & Install via Terminal
 ```bash
 git clone https://github.com/manojm321/ai-screenshot.git
 cd ai-screenshot && ./install.sh
 ```
-
-Or download `AI-Screenshot.zip` from [Releases](https://github.com/manojm321/ai-screenshot/releases) and drag to `/Applications`.
 
 ---
 
