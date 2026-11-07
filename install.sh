@@ -39,9 +39,6 @@ killall Finder 2>/dev/null || true
 echo "==> Starting AI Screenshot..."
 open -a "$INSTALL_DIR/$APP_NAME"
 
-# 5. Native macOS visual confirmation
-osascript -e 'display notification "Running in background! Press ⌘⇧1 anywhere to take an AI screenshot." with title "AI Screenshot" subtitle "Native Hotkey Active" sound name "Glass"' 2>/dev/null || true
-
 echo ""
 echo "--------------------------------------------------------"
 echo "🎉 Setup is 100% complete!"

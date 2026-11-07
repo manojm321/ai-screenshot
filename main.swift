@@ -1,6 +1,7 @@
 import Cocoa
 import Carbon
 import ServiceManagement
+import UserNotifications
 
 // MARK: - HotKey Manager (Carbon EventHotKey)
 class HotKeyManager {
@@ -310,7 +311,7 @@ func captureInteractive() -> String? {
 }
 
 // MARK: - App Delegate
-class AppDelegate: NSObject, NSApplicationDelegate {
+class AppDelegate: NSObject, NSApplicationDelegate, UNUserNotificationCenterDelegate {
     var statusItem: NSStatusItem?
     var previewWindow: NSPanel?
     private var dismissWorkItem: DispatchWorkItem?
@@ -318,6 +319,8 @@ class AppDelegate: NSObject, NSApplicationDelegate {
 
     func applicationDidFinishLaunching(_ notification: Notification) {
         let args = CommandLine.arguments
+
+        UNUserNotificationCenter.current().delegate = self
 
         if args.contains("--show-icon") {
             UserDefaults.standard.set(false, forKey: "HideMenuBarIcon")
@@ -337,18 +340,38 @@ class AppDelegate: NSObject, NSApplicationDelegate {
         }
     }
 
+    func sendNotification(title: String, body: String) {
+        let center = UNUserNotificationCenter.current()
+        center.requestAuthorization(options: [.alert, .sound]) { granted, _ in
+            if granted {
+                let content = UNMutableNotificationContent()
+                content.title = title
+                content.body = body
+                content.sound = .default
+
+                let trigger = UNTimeIntervalNotificationTrigger(timeInterval: 0.1, repeats: false)
+                let request = UNNotificationRequest(identifier: UUID().uuidString, content: content, trigger: trigger)
+                center.add(request, withCompletionHandler: nil)
+            } else {
+                DispatchQueue.global(qos: .utility).async {
+                    let proc = Process()
+                    proc.executableURL = URL(fileURLWithPath: "/usr/bin/osascript")
+                    proc.arguments = ["-e", "display notification \"\(body)\" with title \"\(title)\" sound name \"Glass\""]
+                    try? proc.run()
+                }
+            }
+        }
+    }
+
+    func userNotificationCenter(_ center: UNUserNotificationCenter, willPresent notification: UNNotification, withCompletionHandler completionHandler: @escaping (UNNotificationPresentationOptions) -> Void) {
+        completionHandler([.banner, .sound])
+    }
+
     func notifyOnLaunch() {
         let isFirstLaunch = !UserDefaults.standard.bool(forKey: "HasLaunchedBefore")
-
-        // Trigger notification banner
-        DispatchQueue.global(qos: .utility).async {
-            let proc = Process()
-            proc.executableURL = URL(fileURLWithPath: "/usr/bin/osascript")
-            let title = isFirstLaunch ? "AI Screenshot Ready!" : "AI Screenshot Running"
-            let msg = "Press ⌘ + ⇧ + 1 anywhere to capture. Camera icon added to menu bar."
-            proc.arguments = ["-e", "display notification \"\(msg)\" with title \"\(title)\" sound name \"Glass\""]
-            try? proc.run()
-        }
+        let title = isFirstLaunch ? "AI Screenshot Ready!" : "AI Screenshot Running"
+        let msg = "Press ⌘ + ⇧ + 1 anywhere to capture. Camera icon added to menu bar."
+        sendNotification(title: title, body: msg)
 
         if isFirstLaunch {
             UserDefaults.standard.set(true, forKey: "HasLaunchedBefore")
@@ -357,6 +380,9 @@ class AppDelegate: NSObject, NSApplicationDelegate {
                 alert.messageText = "AI Screenshot is Ready!"
                 alert.informativeText = "AI Screenshot is now active in your top menu bar.\n\n• Shortcut: Press ⌘ + ⇧ + 1 anywhere to take an AI screenshot.\n• Menu Bar: Click the camera icon for quick capture, screenshot folder, or Launch at Login."
                 alert.alertStyle = .informational
+                if let icon = NSApp.applicationIconImage {
+                    alert.icon = icon
+                }
                 alert.addButton(withTitle: "Got It")
                 NSApp.activate(ignoringOtherApps: true)
                 alert.runModal()
@@ -429,6 +455,9 @@ class AppDelegate: NSObject, NSApplicationDelegate {
         alert.messageText = "Hide Menu Bar Icon?"
         alert.informativeText = "AI Screenshot will continue running in the background and respond to ⌘⇧1.\n\nTo restore the menu bar icon, simply open AI Screenshot again from Applications or Spotlight."
         alert.alertStyle = .informational
+        if let icon = NSApp.applicationIconImage {
+            alert.icon = icon
+        }
         alert.addButton(withTitle: "Hide Icon")
         alert.addButton(withTitle: "Cancel")
 
@@ -493,10 +522,7 @@ class AppDelegate: NSObject, NSApplicationDelegate {
         if UserDefaults.standard.bool(forKey: "HideMenuBarIcon") {
             UserDefaults.standard.set(false, forKey: "HideMenuBarIcon")
             setupStatusBar()
-            let proc = Process()
-            proc.executableURL = URL(fileURLWithPath: "/usr/bin/osascript")
-            proc.arguments = ["-e", "display notification \"Menu bar icon restored.\" with title \"AI Screenshot\" sound name \"Glass\""]
-            try? proc.run()
+            sendNotification(title: "AI Screenshot", body: "Menu bar icon restored.")
         } else {
             triggerCapture()
         }
