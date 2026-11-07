@@ -4,9 +4,18 @@
 [![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](LICENSE)
 [![Platform: macOS 14+](https://img.shields.io/badge/Platform-macOS%2014%2B%20(Apple%20Silicon)-black.svg)](https://apple.com/macos)
 
-An open-source macOS utility that replaces standard screenshot naming with **AI-generated semantic descriptions + timestamps** using macOS's native on-device **Apple Foundation Models (`fm`) CLI**.
+An open-source macOS utility that replaces messy, cryptic screenshot filenames with **AI-generated semantic descriptions + timestamps** using macOS's native on-device **Apple Foundation Models (`fm`) CLI**.
 
-No API keys. No external servers. 100% on-device, private, and automated.
+No API keys. No external servers. No telemetry. 100% on-device, private, and automated.
+
+---
+
+## ⚡️ Before & After
+
+| Before (macOS Default) | After (`AI Screenshot`) |
+|:---:|:---:|
+| ![Messy screenshot filenames](screenshots/before.png) | ![Clean semantic screenshot filenames](screenshots/after.png) |
+| *Cryptic, hard to find and sort* | *Clear, completion-friendly `<slug>_<HHmmss>.png`* |
 
 ---
 
@@ -18,17 +27,17 @@ No API keys. No external servers. 100% on-device, private, and automated.
   <slug>_<HHmmss>.png
   ```
   - *Example*: `file-list-chronology_115121.png`
-  - Slug comes first for instant command-line autocompletion and rapid file searching.
-  - Sanitized strictly to alphanumeric characters (`a-z`, `A-Z`, `0-9`), hyphens (`-`), and underscores (`_`).
+  - Slug comes first for instant shell autocompletion (`Tab`), globbing, and Spotlight searches.
+  - Whitelist sanitized: lowercase letters (`a-z`), numbers (`0-9`), and hyphens (`-`).
 - **Native Floating Thumbnail**:
   - Displays a floating preview in the bottom-right corner for 4.5 seconds (just like macOS default).
   - **Click**: Opens screenshot in **Preview**.
   - **Right-Click**: Reveals screenshot in **Finder**.
-  - **Drag & Drop**: Drag directly into Slack, Discord, Mail, or a web browser.
+  - **Drag & Drop**: Drag directly into Slack, Discord, Mail, GitHub, or web browsers.
 - **Interactive Capture**: Uses native `screencapture -i` for pixel-accurate crosshairs or window capture (`Space`).
 - **Native Global Hotkey**: Registers **`⌘ + ⇧ + 1`** via macOS's native Carbon HotKey API (`RegisterEventHotKey`) with 0ms latency and no Accessibility permissions needed.
 - **Menu Bar Companion**: Sleek camera status item in the menu bar with one-click capture, quick access to your screenshot directory, and Launch at Login toggle.
-- **Hideable Menu Bar Icon**: Easily hide the menu bar icon anytime for an invisible, distraction-free setup (`⌘⇧1` continues to work in the background).
+- **Hideable Menu Bar Icon**: Hide the menu bar icon anytime for an invisible, distraction-free setup (`⌘⇧1` continues to work in the background).
 - **GitHub Actions CI**: Automated building and zip artifact generation on every commit and release.
 
 ---
@@ -53,14 +62,31 @@ This compiles `AI Screenshot.app`, installs it to `/Applications`, launches the 
 
 ---
 
+## 🔒 First-Time Setup (Screen Recording Permission)
+
+When taking your first screenshot, macOS TCC requires granting Screen Recording permission to `AI Screenshot.app`:
+
+1. When prompted by macOS, open **System Settings > Privacy & Security > Screen & System Audio Recording**.
+2. Enable the toggle for **AI Screenshot.app**:
+
+   ![Allow Screen Recording in System Settings](screenshots/allow-screen-recording.png)
+
+3. When macOS prompts that the app needs to reload, click **Quit & Reopen**:
+
+   ![Quit and Reopen Prompt](screenshots/quit&reopen.png)
+
+4. That's it! `AI Screenshot` will restart and is permanently authorized.
+
+---
+
 ## ⌨️ How the Shortcut Works
 
 1. **Native HotKey (`RegisterEventHotKey`)**: The app directly registers `⌘ + ⇧ + 1` with the macOS window server.
 2. **Instant Response**: Handled directly in-process with 0ms latency.
 3. **Launch at Login**: Click the camera icon in your top menu bar and check **Launch at Login** to keep `⌘ + ⇧ + 1` active across system restarts.
-4. **Hiding & Restoring the Icon**:
-   - To hide: Click the menu bar icon -> select **Hide Menu Bar Icon**.
-   - To restore: Simply re-open `AI Screenshot` from `/Applications` or Spotlight, or run:
+4. **Hiding & Restoring the Menu Bar Icon**:
+   - **To hide**: Click the camera icon in your menu bar -> select **Hide Menu Bar Icon**.
+   - **To restore**: Simply re-open `AI Screenshot` from `/Applications` or Spotlight, or run:
      ```bash
      open -a "AI Screenshot" --args --show-icon
      ```
