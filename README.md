@@ -13,11 +13,12 @@ No API keys. No external servers. 100% on-device, private, and automated.
 ## ✨ Features
 
 - **On-Device Vision AI**: Uses macOS's native `fm respond --image` command to analyze screenshot content locally in ~1 second.
-- **Strict, Clean Naming**:
+- **Completion-Friendly Naming**:
   ```text
-  YYYY-MM-DD_HHMMSS_<slug>.png
+  <slug>_<HHmmss>.png
   ```
-  - *Example*: `2026-11-07_104215_payment-details-list.png`
+  - *Example*: `file-list-chronology_115121.png`
+  - Slug comes first for instant command-line autocompletion and rapid file searching.
   - Sanitized strictly to alphanumeric characters (`a-z`, `A-Z`, `0-9`), hyphens (`-`), and underscores (`_`).
 - **Native Floating Thumbnail**:
   - Displays a floating preview in the bottom-right corner for 4.5 seconds (just like macOS default).
@@ -79,7 +80,7 @@ flowchart LR
     B --> C["screencapture -i\n(Native macOS Crosshair)"]
     C -->|Area Selected| D["fm respond --image\n(Apple Foundation Model CLI)"]
     D --> E["Slug Sanitizer\n(regex whitelist: a-z0-9_-)"]
-    E --> F["Save to ~/Desktop/\nYYYY-MM-DD_HHMMSS_slug.png"]
+    E --> F["Save to ~/Desktop/\n<slug>_<HHmmss>.png"]
     F --> G["Native Floating Thumbnail\n(NSPanel Preview)"]
     G -->|Drag & Drop| H["Slack / Mail / Browser"]
     G -->|Click| I["Open in Preview"]

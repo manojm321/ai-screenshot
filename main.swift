@@ -183,6 +183,9 @@ func sanitizeSlug(_ text: String) -> String {
     var slug = stripped.replacingOccurrences(of: "[^a-zA-Z0-9_-]+", with: "-", options: .regularExpression)
     slug = slug.trimmingCharacters(in: CharacterSet(charactersIn: "-_")).lowercased()
     slug = slug.replacingOccurrences(of: "-{2,}", with: "-", options: .regularExpression)
+    if slug.hasSuffix("-png") {
+        slug = String(slug.dropLast(4)).trimmingCharacters(in: CharacterSet(charactersIn: "-_"))
+    }
     if slug.isEmpty { return "screenshot" }
     return String(slug.prefix(45))
 }
@@ -286,14 +289,14 @@ func captureInteractive() -> String? {
     let destDir = getScreenshotDirectory()
 
     let formatter = DateFormatter()
-    formatter.dateFormat = "yyyy-MM-dd_HHmmss"
+    formatter.dateFormat = "HHmmss"
     let timestamp = formatter.string(from: Date())
 
-    var filename = "\(timestamp)_\(slug).png"
+    var filename = "\(slug)_\(timestamp).png"
     var destURL = destDir.appendingPathComponent(filename)
     var counter = 1
     while FileManager.default.fileExists(atPath: destURL.path) {
-        filename = "\(timestamp)_\(slug)_\(counter).png"
+        filename = "\(slug)_\(timestamp)_\(counter).png"
         destURL = destDir.appendingPathComponent(filename)
         counter += 1
     }
