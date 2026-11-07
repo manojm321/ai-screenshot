@@ -35,14 +35,16 @@ touch "$INSTALL_DIR/$APP_NAME"
 /System/Library/Frameworks/CoreServices.framework/Frameworks/LaunchServices.framework/Support/lsregister -f -R "$INSTALL_DIR/$APP_NAME" 2>/dev/null || true
 killall Finder 2>/dev/null || true
 
-# 4. Launch the app in background to activate native global hotkey (⌘⇧1)
-echo "==> Starting AI Screenshot..."
+# 4. Launch the app and trigger permission requests
+echo "==> Starting AI Screenshot & requesting permissions..."
 open -a "$INSTALL_DIR/$APP_NAME"
 
 echo ""
 echo "--------------------------------------------------------"
-echo "🎉 Setup is 100% complete!"
-echo "AI Screenshot is running in the background."
-echo "Native global shortcut ⌘ + ⇧ + 1 (Cmd + Shift + 1) is active."
-echo "You also have a camera icon in your top menu bar."
+echo "🎉 Setup complete!"
+echo "AI Screenshot is running in your top menu bar."
+echo "Native global shortcut: ⌘ + ⇧ + 1 (Cmd + Shift + 1)"
+echo ""
+echo "Note: If macOS prompts for Screen Recording permission,"
+echo "click 'Open System Settings' and enable AI Screenshot."
 echo "--------------------------------------------------------"

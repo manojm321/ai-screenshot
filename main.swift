@@ -311,7 +311,7 @@ func captureInteractive() -> String? {
 }
 
 // MARK: - App Delegate
-class AppDelegate: NSObject, NSApplicationDelegate, UNUserNotificationCenterDelegate {
+class AppDelegate: NSObject, NSApplicationDelegate, UNUserNotificationCenterDelegate, NSMenuDelegate {
     var statusItem: NSStatusItem?
     var previewWindow: NSPanel?
     private var dismissWorkItem: DispatchWorkItem?
@@ -330,6 +330,7 @@ class AppDelegate: NSObject, NSApplicationDelegate, UNUserNotificationCenterDele
 
         setupStatusBar()
         setupHotKey()
+        checkAndRequestPermissions()
 
         if args.count > 2 && args[1] == "--preview" {
             showThumbnail(filePath: args[2])
@@ -337,6 +338,38 @@ class AppDelegate: NSObject, NSApplicationDelegate, UNUserNotificationCenterDele
             triggerCapture()
         } else {
             notifyOnLaunch()
+        }
+    }
+
+    func checkAndRequestPermissions() {
+        // 1. Notification authorization
+        let center = UNUserNotificationCenter.current()
+        center.requestAuthorization(options: [.alert, .sound]) { _, _ in }
+
+        // 2. Screen Recording authorization
+        if !CGPreflightScreenCaptureAccess() {
+            _ = CGRequestScreenCaptureAccess()
+
+            DispatchQueue.main.asyncAfter(deadline: .now() + 0.6) {
+                if !CGPreflightScreenCaptureAccess() {
+                    let alert = NSAlert()
+                    alert.messageText = "Screen Recording Permission Required"
+                    alert.informativeText = "macOS requires Screen Recording permission for AI Screenshot to capture selections.\n\nPlease enable 'AI Screenshot' in System Settings."
+                    alert.alertStyle = .warning
+                    if let icon = NSApp.applicationIconImage {
+                        alert.icon = icon
+                    }
+                    alert.addButton(withTitle: "Open System Settings")
+                    alert.addButton(withTitle: "Later")
+                    NSApp.activate(ignoringOtherApps: true)
+                    let resp = alert.runModal()
+                    if resp == .alertFirstButtonReturn {
+                        if let url = URL(string: "x-apple.systempreferences:com.apple.preference.security?Privacy_ScreenCapture") {
+                            NSWorkspace.shared.open(url)
+                        }
+                    }
+                }
+            }
         }
     }
 
@@ -418,6 +451,24 @@ class AppDelegate: NSObject, NSApplicationDelegate, UNUserNotificationCenterDele
         button.image = icon
 
         let menu = NSMenu()
+        menu.delegate = self
+        statusItem?.menu = menu
+        rebuildMenu(menu)
+    }
+
+    func rebuildMenu(_ menu: NSMenu) {
+        menu.removeAllItems()
+
+        if !CGPreflightScreenCaptureAccess() {
+            let permItem = NSMenuItem(
+                title: "⚠️ Grant Screen Recording Permission...",
+                action: #selector(openPermissionsAction),
+                keyEquivalent: ""
+            )
+            permItem.target = self
+            menu.addItem(permItem)
+            menu.addItem(NSMenuItem.separator())
+        }
 
         let captureItem = NSMenuItem(title: "Take AI Screenshot", action: #selector(triggerCaptureAction), keyEquivalent: "1")
         captureItem.keyEquivalentModifierMask = [.command, .shift]
@@ -446,8 +497,17 @@ class AppDelegate: NSObject, NSApplicationDelegate, UNUserNotificationCenterDele
         let quitItem = NSMenuItem(title: "Quit AI Screenshot", action: #selector(quitAction), keyEquivalent: "q")
         quitItem.target = self
         menu.addItem(quitItem)
+    }
 
-        statusItem?.menu = menu
+    func menuWillOpen(_ menu: NSMenu) {
+        rebuildMenu(menu)
+    }
+
+    @objc func openPermissionsAction() {
+        _ = CGRequestScreenCaptureAccess()
+        if let url = URL(string: "x-apple.systempreferences:com.apple.preference.security?Privacy_ScreenCapture") {
+            NSWorkspace.shared.open(url)
+        }
     }
 
     @objc func hideStatusBarIconAction() {
