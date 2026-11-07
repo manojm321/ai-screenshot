@@ -25,7 +25,7 @@ No API keys. No external servers. 100% on-device, private, and automated.
   - **Right-Click**: Reveals screenshot in **Finder**.
   - **Drag & Drop**: Drag directly into Slack, Discord, Mail, or a web browser.
 - **Interactive Capture**: Uses native `screencapture -i` for pixel-accurate crosshairs or window capture (`Space`).
-- **Native In-App Hotkeys (0ms Latency)**: Registers **`⌘ + ⇧ + 1`** via macOS's native Carbon HotKey API (`RegisterEventHotKey`). No Automator, no `ScriptMonitor` gear icon, and no Accessibility permissions needed!
+- **Native Global Hotkey**: Registers **`⌘ + ⇧ + 1`** via macOS's native Carbon HotKey API (`RegisterEventHotKey`) with 0ms latency and no Accessibility permissions needed.
 - **Menu Bar Companion**: Sleek camera status item in the menu bar with one-click capture, quick access to your screenshot directory, and Launch at Login toggle.
 - **GitHub Actions CI**: Automated building and zip artifact generation on every commit and release.
 
@@ -54,7 +54,7 @@ This compiles `AI Screenshot.app`, installs it to `/Applications`, launches the 
 ## ⌨️ How the Shortcut Works
 
 1. **Native HotKey (`RegisterEventHotKey`)**: The app directly registers `⌘ + ⇧ + 1` with the macOS window server.
-2. **Zero Delay & No Gear Icon**: Because it does not run through Automator Quick Actions, macOS's `ScriptMonitor` never appears.
+2. **Instant Response**: Handled directly in-process with 0ms latency.
 3. **Launch at Login**: Click the camera icon in your top menu bar and check **Launch at Login** to keep `⌘ + ⇧ + 1` active across system restarts.
 
 To uninstall anytime:
