@@ -22,7 +22,13 @@ No API keys. 100% local and private.
 ## 🚀 Install
 
 ### Option 1: DMG Installer (Recommended)
-Download **[`AI-Screenshot.dmg`](https://github.com/manojm321/ai-screenshot/releases)**, open it, and drag `AI Screenshot.app` to `Applications`.
+1. Download **[`AI-Screenshot.dmg`](https://github.com/manojm321/ai-screenshot/releases)**, open it, and drag `AI Screenshot.app` to `Applications`.
+2. On first launch, macOS Gatekeeper may show *"Apple could not verify..."* (standard for open-source apps without a paid Apple Developer certificate). To open:
+   - Run in Terminal:
+     ```bash
+     xattr -cr "/Applications/AI Screenshot.app"
+     ```
+   - *Or* go to **System Settings > Privacy & Security** and click **Open Anyway**.
 
 ### Option 2: Build & Install via Terminal
 ```bash
