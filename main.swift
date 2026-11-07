@@ -1,5 +1,77 @@
 import Cocoa
+import Carbon
+import ServiceManagement
 
+// MARK: - HotKey Manager (Carbon EventHotKey)
+class HotKeyManager {
+    static let shared = HotKeyManager()
+    private var hotKeyRef: EventHotKeyRef?
+    private var eventHandler: EventHandlerRef?
+    var onHotKeyPressed: (() -> Void)?
+
+    func register(keyCode: UInt32, modifiers: UInt32) {
+        var eventType = EventTypeSpec(
+            eventClass: OSType(kEventClassKeyboard),
+            eventKind: UInt32(kEventHotKeyPressed)
+        )
+
+        let selfPtr = Unmanaged.passUnretained(self).toOpaque()
+
+        InstallEventHandler(
+            GetApplicationEventTarget(),
+            { (nextHandler, theEvent, userData) -> OSStatus in
+                guard let userData = userData else { return noErr }
+                let manager = Unmanaged<HotKeyManager>.fromOpaque(userData).takeUnretainedValue()
+                var hkID = EventHotKeyID()
+                GetEventParameter(
+                    theEvent,
+                    EventParamName(kEventParamDirectObject),
+                    EventParamType(typeEventHotKeyID),
+                    nil,
+                    MemoryLayout<EventHotKeyID>.size,
+                    nil,
+                    &hkID
+                )
+                if hkID.signature == OSType(0x41495343) && hkID.id == 1 {
+                    DispatchQueue.main.async {
+                        manager.onHotKeyPressed?()
+                    }
+                }
+                return noErr
+            },
+            1,
+            &eventType,
+            selfPtr,
+            &eventHandler
+        )
+
+        let hotKeyID = EventHotKeyID(signature: OSType(0x41495343), id: 1)
+        let status = RegisterEventHotKey(
+            keyCode,
+            modifiers,
+            hotKeyID,
+            GetApplicationEventTarget(),
+            0,
+            &hotKeyRef
+        )
+        if status != noErr {
+            NSLog("Warning: RegisterEventHotKey returned %d", status)
+        }
+    }
+
+    func unregister() {
+        if let hk = hotKeyRef {
+            UnregisterEventHotKey(hk)
+            hotKeyRef = nil
+        }
+        if let handler = eventHandler {
+            RemoveEventHandler(handler)
+            eventHandler = nil
+        }
+    }
+}
+
+// MARK: - Floating Thumbnail View
 class ThumbnailView: NSView, NSDraggingSource {
     let filePath: String
     var onDismiss: (() -> Void)?
@@ -17,7 +89,6 @@ class ThumbnailView: NSView, NSDraggingSource {
         self.layer?.borderColor = NSColor(white: 1.0, alpha: 0.35).cgColor
         self.layer?.borderWidth = 1.5
 
-        // Background visual effect (frosted glass)
         let visualEffect = NSVisualEffectView(frame: self.bounds)
         visualEffect.material = .hudWindow
         visualEffect.state = .active
@@ -25,7 +96,6 @@ class ThumbnailView: NSView, NSDraggingSource {
         visualEffect.autoresizingMask = [.width, .height]
         self.addSubview(visualEffect)
 
-        // Image view
         if let image = NSImage(contentsOfFile: filePath) {
             let imageView = NSImageView(frame: self.bounds.insetBy(dx: 2, dy: 2))
             imageView.image = image
@@ -56,7 +126,6 @@ class ThumbnailView: NSView, NSDraggingSource {
         let current = event.locationInWindow
         let dist = hypot(current.x - start.x, current.y - start.y)
 
-        // Threshold before initiating drag
         if dist > 4 && !isDragging {
             isDragging = true
             onDragStart?()
@@ -81,7 +150,6 @@ class ThumbnailView: NSView, NSDraggingSource {
         onDismiss?()
     }
 
-    // NSDraggingSource
     func draggingSession(_ session: NSDraggingSession, sourceOperationMaskFor context: NSDraggingContext) -> NSDragOperation {
         return .copy
     }
@@ -96,115 +164,7 @@ class ThumbnailView: NSView, NSDraggingSource {
     }
 }
 
-class AppDelegate: NSObject, NSApplicationDelegate {
-    var window: NSPanel!
-    var filePath: String
-    private var dismissWorkItem: DispatchWorkItem?
-
-    init(filePath: String) {
-        self.filePath = filePath
-        super.init()
-    }
-
-    func scheduleDismiss(after delay: TimeInterval = 4.5) {
-        dismissWorkItem?.cancel()
-        let item = DispatchWorkItem { [weak self] in
-            self?.dismiss()
-        }
-        dismissWorkItem = item
-        DispatchQueue.main.asyncAfter(deadline: .now() + delay, execute: item)
-    }
-
-    func cancelDismiss() {
-        dismissWorkItem?.cancel()
-        dismissWorkItem = nil
-    }
-
-    func applicationDidFinishLaunching(_ notification: Notification) {
-        let mouseLoc = NSEvent.mouseLocation
-        guard let screen = NSScreen.screens.first(where: { NSMouseInRect(mouseLoc, $0.frame, false) })
-            ?? NSScreen.main
-            ?? NSScreen.screens.first else {
-            NSApp.terminate(nil)
-            return
-        }
-
-        var targetWidth: CGFloat = 220
-        var targetHeight: CGFloat = 140
-
-        if let rep = NSImageRep(contentsOfFile: filePath) {
-            let imgW = CGFloat(rep.pixelsWide > 0 ? rep.pixelsWide : Int(rep.size.width))
-            let imgH = CGFloat(rep.pixelsHigh > 0 ? rep.pixelsHigh : Int(rep.size.height))
-            if imgW > 0 && imgH > 0 {
-                let ratio = imgW / imgH
-                if ratio > 1 {
-                    targetWidth = 220
-                    targetHeight = max(80, min(150, targetWidth / ratio))
-                } else {
-                    targetHeight = 150
-                    targetWidth = max(90, min(220, targetHeight * ratio))
-                }
-            }
-        }
-
-        let marginX: CGFloat = 24
-        let marginY: CGFloat = 24
-        let screenFrame = screen.visibleFrame
-
-        let windowRect = NSRect(
-            x: screenFrame.maxX - targetWidth - marginX,
-            y: screenFrame.minY + marginY,
-            width: targetWidth,
-            height: targetHeight
-        )
-
-        window = NSPanel(
-            contentRect: windowRect,
-            styleMask: [.borderless, .nonactivatingPanel],
-            backing: .buffered,
-            defer: false
-        )
-
-        window.level = .floating
-        window.collectionBehavior = [.canJoinAllSpaces, .fullScreenAuxiliary]
-        window.isOpaque = false
-        window.backgroundColor = .clear
-        window.hasShadow = true
-        window.alphaValue = 0.0
-
-        let thumbView = ThumbnailView(frame: NSRect(origin: .zero, size: windowRect.size), filePath: filePath)
-        thumbView.onDismiss = { [weak self] in
-            self?.dismiss()
-        }
-        thumbView.onDragStart = { [weak self] in
-            self?.cancelDismiss()
-        }
-        thumbView.onDragEnd = { [weak self] in
-            self?.scheduleDismiss(after: 2.5)
-        }
-        window.contentView = thumbView
-
-        window.orderFrontRegardless()
-
-        NSAnimationContext.runAnimationGroup { context in
-            context.duration = 0.2
-            window.animator().alphaValue = 1.0
-        }
-
-        scheduleDismiss(after: 4.5)
-    }
-
-    func dismiss() {
-        cancelDismiss()
-        NSAnimationContext.runAnimationGroup({ context in
-            context.duration = 0.35
-            window.animator().alphaValue = 0.0
-        }, completionHandler: {
-            NSApp.terminate(nil)
-        })
-    }
-}
-
+// MARK: - Helper Functions
 func getScreenshotDirectory() -> URL {
     if let customPath = CFPreferencesCopyAppValue("location" as CFString, "com.apple.screencapture" as CFString) as? String {
         let expanded = NSString(string: customPath).expandingTildeInPath
@@ -274,7 +234,6 @@ func describeImage(at path: String) -> String {
     do {
         try proc.run()
 
-        // 10-second watchdog to prevent hanging if fm blocks
         let timeoutSeconds: TimeInterval = 10.0
         let startTime = Date()
         while proc.isRunning && Date().timeIntervalSince(startTime) < timeoutSeconds {
@@ -347,29 +306,229 @@ func captureInteractive() -> String? {
     }
 }
 
-func run() {
-    let args = CommandLine.arguments
+// MARK: - App Delegate
+class AppDelegate: NSObject, NSApplicationDelegate {
+    var statusItem: NSStatusItem?
+    var previewWindow: NSPanel?
+    private var dismissWorkItem: DispatchWorkItem?
+    private var isCapturing = false
 
-    var previewPath: String? = nil
+    func applicationDidFinishLaunching(_ notification: Notification) {
+        setupStatusBar()
+        setupHotKey()
 
-    if args.count > 2 && args[1] == "--preview" {
-        previewPath = args[2]
-    } else if args.count > 1 && !args[1].hasPrefix("-") {
-        previewPath = args[1]
-    } else {
-        // Trigger capture
-        previewPath = captureInteractive()
+        let args = CommandLine.arguments
+        if args.count > 2 && args[1] == "--preview" {
+            showThumbnail(filePath: args[2])
+        } else if args.contains("--capture") {
+            triggerCapture()
+        }
     }
 
-    guard let finalPath = previewPath, FileManager.default.fileExists(atPath: finalPath) else {
-        exit(0)
+    func setupHotKey() {
+        // Register ⌘ + ⇧ + 1 (key code 18 = '1')
+        HotKeyManager.shared.register(keyCode: 18, modifiers: UInt32(cmdKey | shiftKey))
+        HotKeyManager.shared.onHotKeyPressed = { [weak self] in
+            self?.triggerCapture()
+        }
     }
 
-    let app = NSApplication.shared
-    app.setActivationPolicy(.accessory)
-    let delegate = AppDelegate(filePath: finalPath)
-    app.delegate = delegate
-    app.run()
+    func setupStatusBar() {
+        statusItem = NSStatusBar.system.statusItem(withLength: NSStatusItem.variableLength)
+        guard let button = statusItem?.button else { return }
+
+        let icon = NSImage(systemSymbolName: "camera.viewfinder", accessibilityDescription: "AI Screenshot")
+            ?? NSImage(systemSymbolName: "camera", accessibilityDescription: "AI Screenshot")
+        icon?.isTemplate = true
+        button.image = icon
+
+        let menu = NSMenu()
+
+        let captureItem = NSMenuItem(title: "Take AI Screenshot", action: #selector(triggerCaptureAction), keyEquivalent: "1")
+        captureItem.keyEquivalentModifierMask = [.command, .shift]
+        captureItem.target = self
+        menu.addItem(captureItem)
+
+        let openFolderItem = NSMenuItem(title: "Open Screenshots Folder", action: #selector(openFolderAction), keyEquivalent: "")
+        openFolderItem.target = self
+        menu.addItem(openFolderItem)
+
+        menu.addItem(NSMenuItem.separator())
+
+        let loginItem = NSMenuItem(title: "Launch at Login", action: #selector(toggleLoginItemAction(_:)), keyEquivalent: "")
+        loginItem.target = self
+        if #available(macOS 13.0, *) {
+            loginItem.state = (SMAppService.mainApp.status == .enabled) ? .on : .off
+        }
+        menu.addItem(loginItem)
+
+        menu.addItem(NSMenuItem.separator())
+
+        let quitItem = NSMenuItem(title: "Quit AI Screenshot", action: #selector(quitAction), keyEquivalent: "q")
+        quitItem.target = self
+        menu.addItem(quitItem)
+
+        statusItem?.menu = menu
+    }
+
+    @objc func triggerCaptureAction() {
+        triggerCapture()
+    }
+
+    @objc func openFolderAction() {
+        let dir = getScreenshotDirectory()
+        NSWorkspace.shared.open(dir)
+    }
+
+    @objc func toggleLoginItemAction(_ sender: NSMenuItem) {
+        if #available(macOS 13.0, *) {
+            do {
+                if SMAppService.mainApp.status == .enabled {
+                    try SMAppService.mainApp.unregister()
+                    sender.state = .off
+                } else {
+                    try SMAppService.mainApp.register()
+                    sender.state = .on
+                }
+            } catch {
+                NSLog("Failed to toggle login item: %@", error.localizedDescription)
+            }
+        }
+    }
+
+    @objc func quitAction() {
+        HotKeyManager.shared.unregister()
+        NSApp.terminate(nil)
+    }
+
+    func triggerCapture() {
+        guard !isCapturing else { return }
+        isCapturing = true
+
+        DispatchQueue.global(qos: .userInitiated).async { [weak self] in
+            let capturedPath = captureInteractive()
+
+            DispatchQueue.main.async {
+                self?.isCapturing = false
+                if let path = capturedPath {
+                    self?.showThumbnail(filePath: path)
+                }
+            }
+        }
+    }
+
+    func applicationShouldHandleReopen(_ sender: NSApplication, hasVisibleWindows flag: Bool) -> Bool {
+        triggerCapture()
+        return true
+    }
+
+    func showThumbnail(filePath: String) {
+        dismissCurrentThumbnail()
+
+        let mouseLoc = NSEvent.mouseLocation
+        guard let screen = NSScreen.screens.first(where: { NSMouseInRect(mouseLoc, $0.frame, false) })
+            ?? NSScreen.main
+            ?? NSScreen.screens.first else {
+            return
+        }
+
+        var targetWidth: CGFloat = 220
+        var targetHeight: CGFloat = 140
+
+        if let rep = NSImageRep(contentsOfFile: filePath) {
+            let imgW = CGFloat(rep.pixelsWide > 0 ? rep.pixelsWide : Int(rep.size.width))
+            let imgH = CGFloat(rep.pixelsHigh > 0 ? rep.pixelsHigh : Int(rep.size.height))
+            if imgW > 0 && imgH > 0 {
+                let ratio = imgW / imgH
+                if ratio > 1 {
+                    targetWidth = 220
+                    targetHeight = max(80, min(150, targetWidth / ratio))
+                } else {
+                    targetHeight = 150
+                    targetWidth = max(90, min(220, targetHeight * ratio))
+                }
+            }
+        }
+
+        let marginX: CGFloat = 24
+        let marginY: CGFloat = 24
+        let screenFrame = screen.visibleFrame
+
+        let windowRect = NSRect(
+            x: screenFrame.maxX - targetWidth - marginX,
+            y: screenFrame.minY + marginY,
+            width: targetWidth,
+            height: targetHeight
+        )
+
+        let window = NSPanel(
+            contentRect: windowRect,
+            styleMask: [.borderless, .nonactivatingPanel],
+            backing: .buffered,
+            defer: false
+        )
+
+        window.level = .floating
+        window.collectionBehavior = [.canJoinAllSpaces, .fullScreenAuxiliary]
+        window.isOpaque = false
+        window.backgroundColor = .clear
+        window.hasShadow = true
+        window.alphaValue = 0.0
+
+        let thumbView = ThumbnailView(frame: NSRect(origin: .zero, size: windowRect.size), filePath: filePath)
+        thumbView.onDismiss = { [weak self] in
+            self?.dismissCurrentThumbnail()
+        }
+        thumbView.onDragStart = { [weak self] in
+            self?.cancelDismiss()
+        }
+        thumbView.onDragEnd = { [weak self] in
+            self?.scheduleDismiss(after: 2.5)
+        }
+        window.contentView = thumbView
+
+        window.orderFrontRegardless()
+
+        NSAnimationContext.runAnimationGroup { context in
+            context.duration = 0.2
+            window.animator().alphaValue = 1.0
+        }
+
+        self.previewWindow = window
+        scheduleDismiss(after: 4.5)
+    }
+
+    func scheduleDismiss(after delay: TimeInterval = 4.5) {
+        dismissWorkItem?.cancel()
+        let item = DispatchWorkItem { [weak self] in
+            self?.dismissCurrentThumbnail()
+        }
+        dismissWorkItem = item
+        DispatchQueue.main.asyncAfter(deadline: .now() + delay, execute: item)
+    }
+
+    func cancelDismiss() {
+        dismissWorkItem?.cancel()
+        dismissWorkItem = nil
+    }
+
+    func dismissCurrentThumbnail() {
+        cancelDismiss()
+        guard let win = previewWindow else { return }
+        self.previewWindow = nil
+
+        NSAnimationContext.runAnimationGroup({ context in
+            context.duration = 0.35
+            win.animator().alphaValue = 0.0
+        }, completionHandler: {
+            win.orderOut(nil)
+        })
+    }
 }
 
-run()
+// MARK: - Main Run Loop
+let app = NSApplication.shared
+app.setActivationPolicy(.accessory)
+let delegate = AppDelegate()
+app.delegate = delegate
+app.run()

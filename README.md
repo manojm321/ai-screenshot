@@ -2,19 +2,11 @@
 
 [![Build macOS App](https://github.com/manojm321/ai-screenshot/actions/workflows/build.yml/badge.svg)](https://github.com/manojm321/ai-screenshot/actions/workflows/build.yml)
 [![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](LICENSE)
-[![Platform: macOS 14+](https://img.shields.io/badge/Platform-macOS%2014%2B%20%7C%20Apple%20Silicon-black.svg)](https://apple.com/macos)
+[![Platform: macOS 14+](https://img.shields.io/badge/Platform-macOS%2014%2B%20(Apple%20Silicon)-black.svg)](https://apple.com/macos)
 
 An open-source macOS utility that replaces standard screenshot naming with **AI-generated semantic descriptions + timestamps** using macOS's native on-device **Apple Foundation Models (`fm`) CLI**.
 
-No API keys. No external servers. No running daemons. 100% on-device, private, and automated.
-
----
-
-## ⚡ Prerequisites
-
-- **macOS**: macOS 14.0+ supported; **macOS 15.1+ (Sequoia)** recommended.
-- **Hardware**: Apple Silicon Mac (M1/M2/M3/M4) with **Apple Intelligence** enabled for on-device Vision AI naming via `/usr/bin/fm`.
-- *(Fallback)*: On Intel Macs or systems without Apple Intelligence, screenshots are captured with high precision and saved with timestamped filenames (`YYYY-MM-DD_HHMMSS_screenshot.png`).
+No API keys. No external servers. 100% on-device, private, and automated.
 
 ---
 
@@ -28,13 +20,13 @@ No API keys. No external servers. No running daemons. 100% on-device, private, a
   - *Example*: `2026-11-07_104215_payment-details-list.png`
   - Sanitized strictly to alphanumeric characters (`a-z`, `A-Z`, `0-9`), hyphens (`-`), and underscores (`_`).
 - **Native Floating Thumbnail**:
-  - Displays a floating preview in the bottom-right corner of the active screen for 4.5 seconds (just like macOS default).
+  - Displays a floating preview in the bottom-right corner for 4.5 seconds (just like macOS default).
   - **Click**: Opens screenshot in **Preview**.
   - **Right-Click**: Reveals screenshot in **Finder**.
-  - **Drag & Drop**: Drag directly into Slack, Discord, Mail, or a web browser (auto-dismiss pauses while dragging).
+  - **Drag & Drop**: Drag directly into Slack, Discord, Mail, or a web browser.
 - **Interactive Capture**: Uses native `screencapture -i` for pixel-accurate crosshairs or window capture (`Space`).
-- **First-Class macOS App**: Packaged as `AI Screenshot.app` with custom retina icon, proper TCC permissions attribution (no Automator runner alerts), and zero Dock pollution (`LSUIElement = true`).
-- **Global Keyboard Shortcut**: Binds **`⌘ + ⇧ + 1`** (`Cmd + Shift + 1`) system-wide.
+- **Native In-App Hotkeys (0ms Latency)**: Registers **`⌘ + ⇧ + 1`** via macOS's native Carbon HotKey API (`RegisterEventHotKey`). No Automator, no `ScriptMonitor` gear icon, and no Accessibility permissions needed!
+- **Menu Bar Companion**: Sleek camera status item in the menu bar with one-click capture, quick access to your screenshot directory, and Launch at Login toggle.
 - **GitHub Actions CI**: Automated building and zip artifact generation on every commit and release.
 
 ---
@@ -49,21 +41,21 @@ cd ai-screenshot
 ./install.sh
 ```
 
-This compiles `AI Screenshot.app`, installs it to `/Applications`, and registers the global `⌘ + ⇧ + 1` shortcut.
+This compiles `AI Screenshot.app`, installs it to `/Applications`, launches the background agent, and enables **`⌘ + ⇧ + 1`** immediately.
 
 ### Option 2: Download Prebuilt from GitHub Releases / CI
 
 1. Download `AI-Screenshot.zip` from the latest [GitHub Release](https://github.com/manojm321/ai-screenshot/releases) or CI build artifact.
 2. Unzip and drag `AI Screenshot.app` into your `/Applications` folder.
-3. Run `./install.sh` (or `python3 install_service.py`) to bind the `⌘ + ⇧ + 1` shortcut.
+3. Launch `AI Screenshot.app`. It will appear in your top menu bar and listen for **`⌘ + ⇧ + 1`**.
 
 ---
 
 ## ⌨️ How the Shortcut Works
 
-1. **Native App**: `AI Screenshot.app` lives in `/Applications` with bundle identifier `com.manojm321.ai-screenshot`.
-2. **Quick Action**: `~/Library/Services/AI Screenshot.workflow` launches `open -b com.manojm321.ai-screenshot`. Because LaunchServices launches the app as its own process, macOS privacy prompts clearly show **"AI Screenshot"** instead of `com.apple.automator.xpc.runner`.
-3. **Key Equivalent**: Registered in `~/Library/Preferences/pbs.plist` under `@$1` (`Cmd + Shift + 1`).
+1. **Native HotKey (`RegisterEventHotKey`)**: The app directly registers `⌘ + ⇧ + 1` with the macOS window server.
+2. **Zero Delay & No Gear Icon**: Because it does not run through Automator Quick Actions, macOS's `ScriptMonitor` never appears.
+3. **Launch at Login**: Click the camera icon in your top menu bar and check **Launch at Login** to keep `⌘ + ⇧ + 1` active across system restarts.
 
 To uninstall anytime:
 ```bash
@@ -76,35 +68,18 @@ make uninstall
 
 ```mermaid
 flowchart LR
-    A["Cmd + Shift + 1"] --> B["AI Screenshot.app\n(LaunchServices)"]
+    A["Cmd + Shift + 1"] --> B["AI Screenshot.app\n(Native Carbon HotKey)"]
     B --> C["screencapture -i\n(Native macOS Crosshair)"]
     C -->|Area Selected| D["fm respond --image\n(Apple Foundation Model CLI)"]
     D --> E["Slug Sanitizer\n(regex whitelist: a-z0-9_-)"]
     E --> F["Save to ~/Desktop/\nYYYY-MM-DD_HHMMSS_slug.png"]
-    F --> G["Native Floating Thumbnail\n(AppDelegate & NSPanel)"]
+    F --> G["Native Floating Thumbnail\n(NSPanel Preview)"]
     G -->|Drag & Drop| H["Slack / Mail / Browser"]
     G -->|Click| I["Open in Preview"]
 ```
 
 ---
 
-## 🏗 Continuous Integration (CI)
-
-The GitHub Actions workflow [`.github/workflows/build.yml`](.github/workflows/build.yml) automatically:
-- Compiles the Swift binary with `swiftc -O` on macOS 14 runners (Apple Silicon).
-- Generates high-res multi-scale retina `.icns` icons with `generate_icon.swift`.
-- Assembles and code-signs `AI Screenshot.app`.
-- Uploads the release-ready `AI-Screenshot.zip` as a GitHub Actions artifact.
-- Publishes releases when tags matching `v*` are pushed.
-
----
-
-## 🤝 Contributing
-
-Contributions, bug reports, and suggestions are welcome! Please check out [CONTRIBUTING.md](CONTRIBUTING.md) for local development guidelines.
-
----
-
 ## 📄 License
 
-[MIT](LICENSE) © 2026 Manoj Kumar M
+[MIT](LICENSE)
