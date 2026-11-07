@@ -3,6 +3,8 @@ import Cocoa
 class ThumbnailView: NSView, NSDraggingSource {
     let filePath: String
     var onDismiss: (() -> Void)?
+    var onDragStart: (() -> Void)?
+    var onDragEnd: (() -> Void)?
     private var dragStartLocation: NSPoint?
     private var isDragging = false
 
@@ -40,6 +42,10 @@ class ThumbnailView: NSView, NSDraggingSource {
         fatalError("init(coder:) has not been implemented")
     }
 
+    override func acceptsFirstMouse(for event: NSEvent?) -> Bool {
+        return true
+    }
+
     override func mouseDown(with event: NSEvent) {
         dragStartLocation = event.locationInWindow
         isDragging = false
@@ -53,6 +59,7 @@ class ThumbnailView: NSView, NSDraggingSource {
         // Threshold before initiating drag
         if dist > 4 && !isDragging {
             isDragging = true
+            onDragStart?()
             let fileURL = URL(fileURLWithPath: filePath)
             let dragItem = NSDraggingItem(pasteboardWriter: fileURL as NSURL)
             dragItem.setDraggingFrame(self.bounds, contents: self)
@@ -80,8 +87,11 @@ class ThumbnailView: NSView, NSDraggingSource {
     }
 
     func draggingSession(_ session: NSDraggingSession, endedAt screenPoint: NSPoint, operation: NSDragOperation) {
+        isDragging = false
         if operation != [] {
             onDismiss?()
+        } else {
+            onDragEnd?()
         }
     }
 }
@@ -89,14 +99,32 @@ class ThumbnailView: NSView, NSDraggingSource {
 class AppDelegate: NSObject, NSApplicationDelegate {
     var window: NSPanel!
     var filePath: String
+    private var dismissWorkItem: DispatchWorkItem?
 
     init(filePath: String) {
         self.filePath = filePath
         super.init()
     }
 
+    func scheduleDismiss(after delay: TimeInterval = 4.5) {
+        dismissWorkItem?.cancel()
+        let item = DispatchWorkItem { [weak self] in
+            self?.dismiss()
+        }
+        dismissWorkItem = item
+        DispatchQueue.main.asyncAfter(deadline: .now() + delay, execute: item)
+    }
+
+    func cancelDismiss() {
+        dismissWorkItem?.cancel()
+        dismissWorkItem = nil
+    }
+
     func applicationDidFinishLaunching(_ notification: Notification) {
-        guard let screen = NSScreen.main else {
+        let mouseLoc = NSEvent.mouseLocation
+        guard let screen = NSScreen.screens.first(where: { NSMouseInRect(mouseLoc, $0.frame, false) })
+            ?? NSScreen.main
+            ?? NSScreen.screens.first else {
             NSApp.terminate(nil)
             return
         }
@@ -148,6 +176,12 @@ class AppDelegate: NSObject, NSApplicationDelegate {
         thumbView.onDismiss = { [weak self] in
             self?.dismiss()
         }
+        thumbView.onDragStart = { [weak self] in
+            self?.cancelDismiss()
+        }
+        thumbView.onDragEnd = { [weak self] in
+            self?.scheduleDismiss(after: 2.5)
+        }
         window.contentView = thumbView
 
         window.orderFrontRegardless()
@@ -157,13 +191,11 @@ class AppDelegate: NSObject, NSApplicationDelegate {
             window.animator().alphaValue = 1.0
         }
 
-        // Auto dismiss after 4.5 seconds
-        DispatchQueue.main.asyncAfter(deadline: .now() + 4.5) { [weak self] in
-            self?.dismiss()
-        }
+        scheduleDismiss(after: 4.5)
     }
 
     func dismiss() {
+        cancelDismiss()
         NSAnimationContext.runAnimationGroup({ context in
             context.duration = 0.35
             window.animator().alphaValue = 0.0
@@ -195,16 +227,38 @@ func sanitizeSlug(_ text: String) -> String {
     return String(slug.prefix(45))
 }
 
+func findFMExecutable() -> String? {
+    if FileManager.default.isExecutableFile(atPath: "/usr/bin/fm") {
+        return "/usr/bin/fm"
+    }
+    let whichProc = Process()
+    whichProc.executableURL = URL(fileURLWithPath: "/usr/bin/which")
+    whichProc.arguments = ["fm"]
+    let pipe = Pipe()
+    whichProc.standardOutput = pipe
+    whichProc.standardError = Pipe()
+    do {
+        try whichProc.run()
+        whichProc.waitUntilExit()
+        if whichProc.terminationStatus == 0 {
+            let data = pipe.fileHandleForReading.readDataToEndOfFile()
+            if let path = String(data: data, encoding: .utf8)?.trimmingCharacters(in: .whitespacesAndNewlines), !path.isEmpty {
+                return path
+            }
+        }
+    } catch {}
+    return nil
+}
+
 func describeImage(at path: String) -> String {
-    let fmCandidate = "/usr/bin/fm"
-    guard FileManager.default.fileExists(atPath: fmCandidate) else {
+    guard let fmPath = findFMExecutable() else {
         return "screenshot"
     }
 
     let instructions = "Describe this screenshot in 2 to 4 words. Output only lowercase words separated by hyphens (kebab-case). Do not include quotes, periods, or extra text. Example: github-issue-list"
 
     let proc = Process()
-    proc.executableURL = URL(fileURLWithPath: fmCandidate)
+    proc.executableURL = URL(fileURLWithPath: fmPath)
     proc.arguments = [
         "respond",
         "--image", path,
@@ -219,7 +273,19 @@ func describeImage(at path: String) -> String {
 
     do {
         try proc.run()
-        proc.waitUntilExit()
+
+        // 10-second watchdog to prevent hanging if fm blocks
+        let timeoutSeconds: TimeInterval = 10.0
+        let startTime = Date()
+        while proc.isRunning && Date().timeIntervalSince(startTime) < timeoutSeconds {
+            Thread.sleep(forTimeInterval: 0.05)
+        }
+
+        if proc.isRunning {
+            proc.terminate()
+            return "screenshot"
+        }
+
         if proc.terminationStatus == 0 {
             let data = stdoutPipe.fileHandleForReading.readDataToEndOfFile()
             if let output = String(data: data, encoding: .utf8), !output.isEmpty {

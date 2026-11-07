@@ -2,7 +2,7 @@
 
 [![Build macOS App](https://github.com/manojm321/ai-screenshot/actions/workflows/build.yml/badge.svg)](https://github.com/manojm321/ai-screenshot/actions/workflows/build.yml)
 [![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](LICENSE)
-[![Platform: macOS 14+](https://img.shields.io/badge/Platform-macOS%2014%2B%20(Apple%20Silicon)-black.svg)](https://apple.com/macos)
+[![Platform: macOS 14+](https://img.shields.io/badge/Platform-macOS%2014%2B%20%7C%20Apple%20Silicon-black.svg)](https://apple.com/macos)
 
 An open-source macOS utility that replaces standard screenshot naming with **AI-generated semantic descriptions + timestamps** using macOS's native on-device **Apple Foundation Models (`fm`) CLI**.
 
@@ -10,9 +10,17 @@ No API keys. No external servers. No running daemons. 100% on-device, private, a
 
 ---
 
+## ⚡ Prerequisites
+
+- **macOS**: macOS 14.0+ supported; **macOS 15.1+ (Sequoia)** recommended.
+- **Hardware**: Apple Silicon Mac (M1/M2/M3/M4) with **Apple Intelligence** enabled for on-device Vision AI naming via `/usr/bin/fm`.
+- *(Fallback)*: On Intel Macs or systems without Apple Intelligence, screenshots are captured with high precision and saved with timestamped filenames (`YYYY-MM-DD_HHMMSS_screenshot.png`).
+
+---
+
 ## ✨ Features
 
-- **On-Device Vision AI**: Uses macOS's native `fm respond --image` command to analyze the screenshot content locally in ~1 second.
+- **On-Device Vision AI**: Uses macOS's native `fm respond --image` command to analyze screenshot content locally in ~1 second.
 - **Strict, Clean Naming**:
   ```text
   YYYY-MM-DD_HHMMSS_<slug>.png
@@ -20,10 +28,10 @@ No API keys. No external servers. No running daemons. 100% on-device, private, a
   - *Example*: `2026-11-07_104215_payment-details-list.png`
   - Sanitized strictly to alphanumeric characters (`a-z`, `A-Z`, `0-9`), hyphens (`-`), and underscores (`_`).
 - **Native Floating Thumbnail**:
-  - Displays a floating preview in the bottom-right corner for 4.5 seconds (just like macOS default).
+  - Displays a floating preview in the bottom-right corner of the active screen for 4.5 seconds (just like macOS default).
   - **Click**: Opens screenshot in **Preview**.
   - **Right-Click**: Reveals screenshot in **Finder**.
-  - **Drag & Drop**: Drag directly into Slack, Discord, Mail, or a web browser.
+  - **Drag & Drop**: Drag directly into Slack, Discord, Mail, or a web browser (auto-dismiss pauses while dragging).
 - **Interactive Capture**: Uses native `screencapture -i` for pixel-accurate crosshairs or window capture (`Space`).
 - **First-Class macOS App**: Packaged as `AI Screenshot.app` with custom retina icon, proper TCC permissions attribution (no Automator runner alerts), and zero Dock pollution (`LSUIElement = true`).
 - **Global Keyboard Shortcut**: Binds **`⌘ + ⇧ + 1`** (`Cmd + Shift + 1`) system-wide.
@@ -91,6 +99,12 @@ The GitHub Actions workflow [`.github/workflows/build.yml`](.github/workflows/bu
 
 ---
 
+## 🤝 Contributing
+
+Contributions, bug reports, and suggestions are welcome! Please check out [CONTRIBUTING.md](CONTRIBUTING.md) for local development guidelines.
+
+---
+
 ## 📄 License
 
-[MIT](LICENSE)
+[MIT](LICENSE) © 2026 Manoj Kumar M

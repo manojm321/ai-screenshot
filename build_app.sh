@@ -14,11 +14,9 @@ echo "==> Building $APP_NAME.app..."
 rm -rf "$APP_BUNDLE"
 mkdir -p "$MACOS" "$RESOURCES"
 
-# 2. Generate icon if needed
-if [ ! -f "$DIR/AppIcon.icns" ]; then
-    echo "==> Generating AppIcon.icns..."
-    swift "$DIR/generate_icon.swift"
-fi
+# 2. Always generate fresh pixel-perfect icon
+echo "==> Generating AppIcon.icns..."
+swift "$DIR/generate_icon.swift"
 cp "$DIR/AppIcon.icns" "$RESOURCES/AppIcon.icns"
 
 # 3. Compile native binary
@@ -39,6 +37,8 @@ cat <<EOF > "$CONTENTS/Info.plist"
     <key>CFBundleExecutable</key>
     <string>AI Screenshot</string>
     <key>CFBundleIconFile</key>
+    <string>AppIcon</string>
+    <key>CFBundleIconName</key>
     <string>AppIcon</string>
     <key>CFBundleIdentifier</key>
     <string>com.manojm321.ai-screenshot</string>
@@ -69,5 +69,8 @@ echo -n "APPL????" > "$CONTENTS/PkgInfo"
 
 # 6. Ad-hoc codesign so macOS Gatekeeper / TCC treats it as a first-class app
 codesign --force --deep --sign - "$APP_BUNDLE"
+
+# 7. Touch bundle to ensure Finder invalidates any cached icon
+touch "$APP_BUNDLE"
 
 echo "✅ Successfully built: $APP_BUNDLE"

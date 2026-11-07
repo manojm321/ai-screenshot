@@ -3,7 +3,7 @@ all: app
 app:
 	./build_app.sh
 
-install: app
+install:
 	./install.sh
 
 uninstall:

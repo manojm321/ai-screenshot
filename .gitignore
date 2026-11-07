@@ -17,3 +17,11 @@ __pycache__/
 *~
 .*~
 .agent-shell/
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# Xcode
+xcuserdata/
+DerivedData/
