@@ -346,30 +346,9 @@ class AppDelegate: NSObject, NSApplicationDelegate, UNUserNotificationCenterDele
         let center = UNUserNotificationCenter.current()
         center.requestAuthorization(options: [.alert, .sound]) { _, _ in }
 
-        // 2. Screen Recording authorization
+        // 2. Screen Recording authorization - triggers macOS's native system prompt directly
         if !CGPreflightScreenCaptureAccess() {
             _ = CGRequestScreenCaptureAccess()
-
-            DispatchQueue.main.asyncAfter(deadline: .now() + 0.6) {
-                if !CGPreflightScreenCaptureAccess() {
-                    let alert = NSAlert()
-                    alert.messageText = "Screen Recording Permission Required"
-                    alert.informativeText = "macOS requires Screen Recording permission for AI Screenshot to capture selections.\n\nPlease enable 'AI Screenshot' in System Settings."
-                    alert.alertStyle = .warning
-                    if let icon = NSApp.applicationIconImage {
-                        alert.icon = icon
-                    }
-                    alert.addButton(withTitle: "Open System Settings")
-                    alert.addButton(withTitle: "Later")
-                    NSApp.activate(ignoringOtherApps: true)
-                    let resp = alert.runModal()
-                    if resp == .alertFirstButtonReturn {
-                        if let url = URL(string: "x-apple.systempreferences:com.apple.preference.security?Privacy_ScreenCapture") {
-                            NSWorkspace.shared.open(url)
-                        }
-                    }
-                }
-            }
         }
     }
 
@@ -402,25 +381,11 @@ class AppDelegate: NSObject, NSApplicationDelegate, UNUserNotificationCenterDele
 
     func notifyOnLaunch() {
         let isFirstLaunch = !UserDefaults.standard.bool(forKey: "HasLaunchedBefore")
+        UserDefaults.standard.set(true, forKey: "HasLaunchedBefore")
+
         let title = isFirstLaunch ? "AI Screenshot Ready!" : "AI Screenshot Running"
         let msg = "Press ⌘ + ⇧ + 1 anywhere to capture. Camera icon added to menu bar."
         sendNotification(title: title, body: msg)
-
-        if isFirstLaunch {
-            UserDefaults.standard.set(true, forKey: "HasLaunchedBefore")
-            DispatchQueue.main.asyncAfter(deadline: .now() + 0.3) {
-                let alert = NSAlert()
-                alert.messageText = "AI Screenshot is Ready!"
-                alert.informativeText = "AI Screenshot is now active in your top menu bar.\n\n• Shortcut: Press ⌘ + ⇧ + 1 anywhere to take an AI screenshot.\n• Menu Bar: Click the camera icon for quick capture, screenshot folder, or Launch at Login."
-                alert.alertStyle = .informational
-                if let icon = NSApp.applicationIconImage {
-                    alert.icon = icon
-                }
-                alert.addButton(withTitle: "Got It")
-                NSApp.activate(ignoringOtherApps: true)
-                alert.runModal()
-            }
-        }
     }
 
     func setupHotKey() {
