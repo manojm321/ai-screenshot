@@ -44,7 +44,7 @@ cd ai-screenshot && ./install.sh
 - **Floating Thumbnail**: Click to open, right-click to reveal in Finder, or drag & drop into Slack/Mail/Browser.
 - **Menu Bar**: Click the camera icon for quick capture, Launch at Login, or to hide the icon.
 
-<details>
+<details open>
 <summary><b>🔒 First-Time Setup (Permissions)</b></summary>
 
 1. In **System Settings > Privacy & Security > Screen & System Audio Recording**, enable **AI Screenshot.app**:
