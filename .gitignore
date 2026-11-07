@@ -1,0 +1,19 @@
+# macOS
+.DS_Store
+
+# Build artifacts
+AI Screenshot
+AI Screenshot.app/
+preview_thumbnail
+AppIcon.icns
+*.zip
+*.sha256
+
+# Python
+__pycache__/
+*.pyc
+
+# Editor / Shell temp files
+*~
+.*~
+.agent-shell/
