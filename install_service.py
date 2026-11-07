@@ -24,7 +24,7 @@ def create_workflow_bundle():
     info_plist = {
         "CFBundleDevelopmentRegion": "English",
         "CFBundleGetInfoString": "AI Screenshot",
-        "CFBundleIdentifier": "com.user.AI-Screenshot",
+        "CFBundleIdentifier": "com.manojm321.AI-Screenshot",
         "CFBundleInfoDictionaryVersion": "6.0",
         "CFBundleName": "AI Screenshot",
         "CFBundlePackageType": "BNDL",
@@ -48,7 +48,8 @@ def create_workflow_bundle():
     # Launch AI Screenshot.app via LaunchServices so macOS TCC attributes screen capture
     # directly to 'AI Screenshot' rather than 'com.apple.automator.xpc.runner'
     cmd_string = (
-        "/usr/bin/open -b com.user.ai-screenshot "
+        "/usr/bin/open -b com.manojm321.ai-screenshot "
+        "|| /usr/bin/open -b com.user.ai-screenshot "
         "|| /usr/bin/open -a '/Applications/AI Screenshot.app' "
         f"|| /usr/bin/open -a '{os.path.expanduser('~/Applications/AI Screenshot.app')}'"
     )
@@ -141,6 +142,7 @@ def register_hotkey():
     nsservices = data.get("NSServicesStatus", {})
     # Register both the bundle-prefixed ID and fallback (null) ID to ensure macOS matches it
     service_keys = [
+        "com.manojm321.AI-Screenshot - AI Screenshot - runWorkflowAsService",
         "com.user.AI-Screenshot - AI Screenshot - runWorkflowAsService",
         "(null) - AI Screenshot - runWorkflowAsService",
     ]

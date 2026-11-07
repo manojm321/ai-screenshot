@@ -1,5 +1,9 @@
 # 📸 AI Screenshot Renamer (`AI Screenshot.app`)
 
+[![Build macOS App](https://github.com/manojm321/ai-screenshot/actions/workflows/build.yml/badge.svg)](https://github.com/manojm321/ai-screenshot/actions/workflows/build.yml)
+[![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](LICENSE)
+[![Platform: macOS 14+](https://img.shields.io/badge/Platform-macOS%2014%2B%20(Apple%20Silicon)-black.svg)](https://apple.com/macos)
+
 An open-source macOS utility that replaces standard screenshot naming with **AI-generated semantic descriptions + timestamps** using macOS's native on-device **Apple Foundation Models (`fm`) CLI**.
 
 No API keys. No external servers. No running daemons. 100% on-device, private, and automated.
@@ -32,7 +36,7 @@ No API keys. No external servers. No running daemons. 100% on-device, private, a
 ### Option 1: One-Command Local Build & Install
 
 ```bash
-git clone https://github.com/your-username/ai-screenshot.git
+git clone https://github.com/manojm321/ai-screenshot.git
 cd ai-screenshot
 ./install.sh
 ```
@@ -41,7 +45,7 @@ This compiles `AI Screenshot.app`, installs it to `/Applications`, and registers
 
 ### Option 2: Download Prebuilt from GitHub Releases / CI
 
-1. Download `AI-Screenshot.zip` from the latest [GitHub Release](https://github.com/your-username/ai-screenshot/releases) or CI build artifact.
+1. Download `AI-Screenshot.zip` from the latest [GitHub Release](https://github.com/manojm321/ai-screenshot/releases) or CI build artifact.
 2. Unzip and drag `AI Screenshot.app` into your `/Applications` folder.
 3. Run `./install.sh` (or `python3 install_service.py`) to bind the `⌘ + ⇧ + 1` shortcut.
 
@@ -49,8 +53,8 @@ This compiles `AI Screenshot.app`, installs it to `/Applications`, and registers
 
 ## ⌨️ How the Shortcut Works
 
-1. **Native App**: `AI Screenshot.app` lives in `/Applications` with bundle identifier `com.user.ai-screenshot`.
-2. **Quick Action**: `~/Library/Services/AI Screenshot.workflow` launches `open -b com.user.ai-screenshot`. Because LaunchServices launches the app as its own process, macOS privacy prompts clearly show **"AI Screenshot"** instead of `com.apple.automator.xpc.runner`.
+1. **Native App**: `AI Screenshot.app` lives in `/Applications` with bundle identifier `com.manojm321.ai-screenshot`.
+2. **Quick Action**: `~/Library/Services/AI Screenshot.workflow` launches `open -b com.manojm321.ai-screenshot`. Because LaunchServices launches the app as its own process, macOS privacy prompts clearly show **"AI Screenshot"** instead of `com.apple.automator.xpc.runner`.
 3. **Key Equivalent**: Registered in `~/Library/Preferences/pbs.plist` under `@$1` (`Cmd + Shift + 1`).
 
 To uninstall anytime:

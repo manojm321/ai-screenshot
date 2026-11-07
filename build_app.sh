@@ -41,7 +41,7 @@ cat <<EOF > "$CONTENTS/Info.plist"
     <key>CFBundleIconFile</key>
     <string>AppIcon</string>
     <key>CFBundleIdentifier</key>
-    <string>com.user.ai-screenshot</string>
+    <string>com.manojm321.ai-screenshot</string>
     <key>CFBundleInfoDictionaryVersion</key>
     <string>6.0</string>
     <key>CFBundleName</key>
